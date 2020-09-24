@@ -1,0 +1,46 @@
+defaults:
+  - agent: ddpg
+
+# env
+env: cartpole_balance
+num_tasks: 5
+# train
+num_train_steps: 1000000
+num_seed_steps: 1000
+num_train_iters: 1
+replay_buffer_capacity: ${num_train_steps}
+seed: 1
+# eval
+eval_frequency: 10000
+num_eval_episodes: 3
+# misc
+log_frequency_step: 10000
+log_save_tb: true
+save_video: true
+device: cuda
+# global params
+lr: 1e-4
+batch_size: 1024
+actor_stddev: 0.2
+
+experiment: bench
+
+# hydra configuration
+hydra:
+  name: ${env}
+  run:
+    dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
+    #dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${agent.name}
+  sweep:
+    dir: ./exp/${now:%Y.%m.%d}/${now:%H%M%S}_${experiment}
+    subdir: ${hydra.job.num}
+  launcher:
+    params:
+      queue_parameters:
+        slurm:
+          max_num_timeout: 100000
+          time: 4319
+          #partition: learnfair
+          partition: priority
+          comment: iclr_deadline
+    mem_limit: 64

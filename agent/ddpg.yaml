@@ -1,0 +1,34 @@
+agent:
+  name: ddpg
+  class: agent.ddpg.DDPGAgent
+  params:
+    obs_shape: ??? # to be specified later
+    action_shape: ??? # to be specified later
+    action_range: ??? # to be specified later
+    device: ${device}
+    critic_cfg: ${critic}
+    actor_cfg: ${actor}
+    discount: 0.99
+    lr: ${lr}
+    actor_update_frequency: 2 #1
+    critic_tau: 0.01 #0.005
+    critic_target_update_frequency: 2
+    batch_size: ${batch_size}
+    
+critic:
+  class: agent.ddpg.Critic
+  params:
+    obs_shape: ${agent.params.obs_shape}
+    action_shape: ${agent.params.action_shape}
+    hidden_dim: 1024
+    hidden_depth: 2
+    
+actor:
+  class: agent.ddpg.Actor
+  params:
+    obs_shape: ${agent.params.obs_shape}
+    action_shape: ${agent.params.action_shape}
+    hidden_depth: 2
+    hidden_dim: 1024
+    stddev: ${actor_stddev}
+    parameterization: squashed
