@@ -142,7 +142,7 @@ class DDPGAgent(object):
         return utils.to_np(action[0])
     
     def reset(self):
-        pass
+        return None
 
     def update_critic(self, obs, action, reward, next_obs, discount,
                       logger, step):
@@ -191,12 +191,12 @@ class DDPGAgent(object):
 
         self.actor.log(logger, step)
         
-    def step(self, obs, action, reward, next_obs):
-        pass
+    def step(self, state, obs, action, reward, next_obs):
+        return state
 
     def update(self, replay_buffer, logger, step):
         obs, action, reward, next_obs, discount = replay_buffer.sample(
-            self.batch_size, self.discount)
+            0, self.batch_size, self.discount)
 
         logger.log('train/batch_reward', reward.mean(), step)
 

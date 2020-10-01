@@ -49,7 +49,8 @@ class Workspace(object):
         ]
         self.agent = hydra.utils.instantiate(cfg.agent)
 
-        self.replay_buffer = MetaReplayBuffer(len(cfg.train_tasks),
+        num_buffers = 1 if cfg.agent.name == 'ddpg' else len(cfg.train_tasks)
+        self.replay_buffer = MetaReplayBuffer(num_buffers,
                                           obs_spec.shape, action_spec.shape,
                                           cfg.replay_buffer_capacity,
                                           self.device)

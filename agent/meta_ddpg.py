@@ -172,8 +172,8 @@ class MetaDDPGAgent(object):
     def update_critic(self, obses, actions, rewards, next_obses, discounts,
                       logger, step):
         
-        import ipdb; ipdb.set_trace()
-        state = torch.zero((obses.shape[1], self.state_model.state_dim)).to(self.device)
+        #import ipdb; ipdb.set_trace()
+        state = torch.zeros((obses.shape[1], self.state_model.state_dim)).to(self.device)
         T = obses.shape[0]
         critic_loss = 0
         for t in range(T):
@@ -204,8 +204,8 @@ class MetaDDPGAgent(object):
         self.critic.log(logger, step)
 
     def update_actor(self, obses, actions, rewards, next_obses, logger, step):
-        import ipdb; ipdb.set_trace()
-        state = torch.zero((obses.shape[0], self.state_model.state_dim)).to(self.device)
+        #import ipdb; ipdb.set_trace()
+        state = torch.zeros((obses.shape[1], self.state_model.state_dim)).to(self.device)
         T = obses.shape[0]
         
         actor_loss = 0
@@ -237,7 +237,7 @@ class MetaDDPGAgent(object):
             obses, actions, rewards, next_obses, discounts = replay_buffer.multi_sample(
                 task_id, self.batch_size, self.multi_step, self.discount)
 
-            logger.log('train/batch_reward', reward.mean(), step)
+            logger.log(f'train/task_{task_id}_batch_reward', rewards.mean(), step)
 
             self.update_critic(obses, actions, rewards, next_obses, discounts, logger,
                                step)
