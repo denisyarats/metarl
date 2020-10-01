@@ -32,33 +32,6 @@ class Overrides(object):
         return cmd
 
 
-ENVS_SMALL = [
-    'cheetah_run', 'walker_walk', 'cartpole_swingup', 'reacher_easy',
-    'ball_in_cup_catch', 'finger_spin'
-]
-
-ENVS_HARD = [
-    'acrobot_swingup',
-    #'fish_swim',
-    'hopper_hop',
-    'humanoid_stand',
-    'humanoid_walk',
-    'humanoid_run',
-    'quadruped_run',
-    #'swimmer_swimmer6',
-    #'swimmer_swimmer15'
-]
-
-ENVS = [
-    'cartpole_swingup_sparse', 'finger_spin', 'walker_run', 'fish_upright',
-    'humanoid_run', 'fish_swim', 'quadruped_walk', 'cheetah_run',
-    'quadruped_run', 'humanoid_walk', 'walker_stand', 'hopper_hop',
-    'reacher_hard', 'finger_turn_easy', 'walker_walk', 'reacher_easy',
-    'finger_turn_hard', 'hopper_stand', 'humanoid_stand', 'pendulum_swingup',
-    'cartpole_balance_sparse', 'cartpole_balance', 'ball_in_cup_catch',
-    'cartpole_swingup'
-]
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -70,21 +43,12 @@ def main():
     overrides.add('hydra/launcher', ['submitit'])
     overrides.add(key='experiment', values=[args.experiment])
     overrides.add(key='log_save_tb', values=['false'])
-    overrides.add(key='save_video', values=['false'])
     # envs
-    overrides.add(key='env', values=ENVS_SMALL)
-    overrides.add(key='num_train_steps', values=[1000000])
-    overrides.add(key='eval_frequency', values=[50000])
+    overrides.add(key='env', values=['cartpole_balance'])
+    overrides.add(key='num_train_steps', values=[500000])
+    overrides.add(key='eval_frequency', values=[10000])
     overrides.add(key='agent', values=['ddpg'])
-    overrides.add(key='agent.params.actor_update_frequency', values=[1])
-    overrides.add(key='agent.params.critic_target_update_frequency',
-                  values=[1])
-    overrides.add(key='obs_type', values=['features'])
-    overrides.add(key='agent.params.use_ln', values=[True])
-    #overrides.add(key='lr', values=[1e-3, 5e-4, 1e-4])
-    overrides.add(key='hidden_depth', values=[2, 3, 4, 5, 7])
-    #overrides.add(key='parameterization', values=['squashed'])
-    #overrides.add(key='parameterization', values=['clipped'])
+    
     # seeds
     overrides.add(key='seed', values=list(range(1, 6)))
 

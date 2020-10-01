@@ -14,7 +14,7 @@ import hydra
 import torch
 import utils
 from logger import Logger
-from replay_buffer import ReplayBuffer
+from replay_buffer import ReplayBuffer, MetaReplayBuffer
 from video import VideoRecorder
 
 torch.backends.cudnn.benchmark = True
@@ -49,7 +49,8 @@ class Workspace(object):
         ]
         self.agent = hydra.utils.instantiate(cfg.agent)
 
-        self.replay_buffer = ReplayBuffer(obs_spec.shape, action_spec.shape,
+        self.replay_buffer = MetaReplayBuffer(len(cfg.train_tasks),
+                                          obs_spec.shape, action_spec.shape,
                                           cfg.replay_buffer_capacity,
                                           self.device)
 
@@ -59,7 +60,22 @@ class Workspace(object):
 
     def evaluate(self):
         average_total_reward = 0
-        for task_id in [3, 4]: #range(self.eval_env.num_tasks()):
+        for task_id in self.cfg.eval_tasks:
+            # adaptation phase
+            state = self.agent.reset() # reset agent once, so the memory persists acros episodes
+            for episode in range(self.cfg.num_adapt_episodes):
+                time_step = self.eval_env.reset(task_id)
+                while not time_step.last():
+                    with utils.eval_mode(self.agent):
+                        obs = time_step.observation['features']
+                        action = self.agent.act(obs, state, sample=False)
+                    time_step = self.eval_env.step(action)
+                    next_obs = time_step.observation['features']
+                    # update agent's memory
+                    state = self.agent.step(state, obs, action, time_step.reward, next_obs)
+            
+            # evaluation phase
+            # agent's memory should be initialized by now
             average_episode_reward = 0
             for episode in range(self.cfg.num_eval_episodes):
                 time_step = self.eval_env.reset(task_id)
@@ -70,8 +86,11 @@ class Workspace(object):
                 while not time_step.last():
                     with utils.eval_mode(self.agent):
                         obs = time_step.observation['features']
-                        action = self.agent.act(obs, sample=False)
+                        action = self.agent.act(obs, state, sample=False)
                     time_step = self.eval_env.step(action)
+                    next_obs = time_step.observation['features']
+                    # update agent's memory
+                    state = self.agent.step(state, obs, action, time_step.reward, next_obs)
                     self.eval_video_recorder.record(self.eval_env)
                     episode_reward += time_step.reward
                     episode_step += 1
@@ -106,7 +125,12 @@ class Workspace(object):
                         save=(self.step > self.cfg.num_seed_steps),
                         ty='train')
 
-                task_id = np.random.randint(3)#self.env.num_tasks())
+                # initially try each task
+                if episode < len(self.cfg.train_tasks):
+                    task_id = episode
+                else:
+                    task_id = np.random.choice(self.cfg.train_tasks)
+                state = self.agent.reset()
                 time_step = self.env.reset(task_id)
                 obs = time_step.observation['features']
                 episode_reward = 0
@@ -127,7 +151,7 @@ class Workspace(object):
                                            spec.shape)
             else:
                 with utils.eval_mode(self.agent):
-                    action = self.agent.act(obs, sample=True)
+                    action = self.agent.act(obs, state, sample=True)
 
             # run training update
             if self.step >= self.cfg.num_seed_steps:
@@ -142,8 +166,10 @@ class Workspace(object):
             done = time_step.last()
             episode_reward += time_step.reward
 
-            self.replay_buffer.add(obs, action, time_step.reward, next_obs,
+            self.replay_buffer.add(task_id, obs, action, time_step.reward, next_obs,
                                    done)
+            # update agent's memory
+            state = self.agent.step(state, obs, action, time_step.reward, next_obs)
 
             obs = next_obs
             episode_step += 1

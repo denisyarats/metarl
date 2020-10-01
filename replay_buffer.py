@@ -50,3 +50,46 @@ class ReplayBuffer(object):
         discounts = torch.as_tensor(discounts, device=self.device)
 
         return obses, actions, rewards, next_obses, discounts
+    
+    def multi_sample(self, batch_size, T, discount):
+        assert T < len(self)
+        idxs = np.random.randint(0, len(self) - T, size=batch_size)
+        
+        obses, actions, rewards, next_obses, discounts = [], [], [], [], []
+        for t in range(T):
+            obses.append(self.obses[idxs + t])
+            actions.append(self.actions[idxs + t])
+            rewards.append(self.rewards[idxs + t])
+            next_obses.append(self.next_obses[idxs + t])
+            discounts.append(np.ones((idxs.shape[0], 1), dtype=np.float32) * discount)
+            
+        obses = torch.as_tensor(np.stack(obses), device=self.device).float()
+        next_obses = torch.as_tensor(np.stack(next_obses), device=self.device).float()
+        actions = torch.as_tensor(np.stack(actions), device=self.device)
+        rewards = torch.as_tensor(np.stack(rewards), device=self.device)
+        discounts = torch.as_tensor(np.stack(discounts), device=self.device)
+        
+        return obses, actions, rewards, next_obses, discounts
+
+    
+class MetaReplayBuffer(object):
+    def __init__(self, num_tasks, obs_shape, action_shape, capacity, device):
+        self.buffers = []
+        for task_id in range(num_tasks):
+            buffer = ReplayBuffer(obs_shape, action_shape, capacity, device)
+            self.buffers.append(buffer)
+            
+    def num_tasks(self):
+        return len(self.buffers)
+            
+    def add(self, task_id, obs, action, reward, next_obs, done):
+        buffer = self.buffers[task_id]
+        buffer.add(obs, action, reward, next_obs, done)
+        
+    def sample(self, task_id, batch_size, discount):
+        buffer = self.buffers[task_id]
+        return buffer.sample(batch_size, discount)
+    
+    def multi_sample(self, task_id, batch_size, T, discount):
+        buffer = self.buffers[task_id]
+        return buffer.multi_sample(batch_size, T, discount)

@@ -24,7 +24,9 @@ AGENT_TRAIN_FORMAT = {
             ('actor_entropy', 'AENT', 'float')],
     'ddpg': [('batch_reward', 'BR', 'float'), ('actor_loss', 'ALOSS', 'float'),
              ('critic_loss', 'CLOSS', 'float'), ('critic_v', 'V', 'float'),
-             ('critic_q', 'Q', 'float')]
+             ('critic_q', 'Q', 'float')],
+    'meta_ddpg': [('batch_reward', 'BR', 'float'), ('actor_loss', 'ALOSS', 'float'),
+             ('critic_loss', 'CLOSS', 'float')]
 }
 
 

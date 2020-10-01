@@ -1,6 +1,6 @@
 agent:
-  name: ddpg
-  class: agent.ddpg.DDPGAgent
+  name: meta_ddpg
+  class: agent.meta_ddpg.MetaDDPGAgent
   params:
     obs_shape: ??? # to be specified later
     action_shape: ??? # to be specified later
@@ -8,27 +8,38 @@ agent:
     device: ${device}
     critic_cfg: ${critic}
     actor_cfg: ${actor}
+    state_model_cfg: ${state_model}
     discount: 0.99
     lr: ${lr}
     actor_update_frequency: 1
     critic_tau: 0.005
     critic_target_update_frequency: 2
-    batch_size: ${batch_size}
+    batch_size: 128
+    multi_step: 5
     
 critic:
-  class: agent.ddpg.Critic
+  class: agent.meta_ddpg.Critic
   params:
     obs_shape: ${agent.params.obs_shape}
     action_shape: ${agent.params.action_shape}
+    state_dim: 64
     hidden_dim: 1024
     hidden_depth: 2
     
 actor:
-  class: agent.ddpg.Actor
+  class: agent.meta_ddpg.Actor
   params:
     obs_shape: ${agent.params.obs_shape}
     action_shape: ${agent.params.action_shape}
+    state_dim: 64
     hidden_depth: 2
     hidden_dim: 1024
     stddev: ${actor_stddev}
     parameterization: squashed
+    
+state_model:
+  class: agent.meta_ddpg.StateModel
+  params:
+    obs_shape: ${agent.params.obs_shape}
+    action_shape: ${agent.params.action_shape}
+    state_dim: 64
