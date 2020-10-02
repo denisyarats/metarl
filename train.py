@@ -128,7 +128,7 @@ class Workspace(object):
 
                 # initially try each task
                 if episode < len(self.cfg.train_tasks):
-                    task_id = episode
+                    task_id = self.cfg.train_tasks[episode]
                 else:
                     task_id = np.random.choice(self.cfg.train_tasks)
                 state = self.agent.reset()
@@ -167,7 +167,8 @@ class Workspace(object):
             done = time_step.last()
             episode_reward += time_step.reward
 
-            self.replay_buffer.add(task_id, obs, action, time_step.reward, next_obs,
+            buffer_id = 0 if self.cfg.agent.name == 'ddpg' else task_id
+            self.replay_buffer.add(buffer_id, obs, action, time_step.reward, next_obs,
                                    done)
             # update agent's memory
             state = self.agent.step(state, obs, action, time_step.reward, next_obs)

@@ -132,7 +132,7 @@ class DDPGAgent(object):
     def alpha(self):
         return self.log_alpha.exp()
 
-    def act(self, obs, sample=False):
+    def act(self, obs, state, sample=False):
         obs = torch.FloatTensor(obs).to(self.device)
         obs = obs.unsqueeze(0)
         dist = self.actor(obs)
