@@ -169,7 +169,7 @@ class MetaDDPGAgent(object):
         next_obs = torch.FloatTensor(next_obs).to(self.device).unsqueeze(0)
         return self.state_model.forward(state, obs, action, reward, next_obs)
 
-    def update_critic(self, obses, actions, rewards, next_obses, discounts,
+    def update_critic2(self, obses, actions, rewards, next_obses, discounts,
                       logger, step):
         
         #import ipdb; ipdb.set_trace()
@@ -202,8 +202,41 @@ class MetaDDPGAgent(object):
         self.state_model_optimizer.step()
 
         self.critic.log(logger, step)
+        
+    def update_critic(self, obses, actions, rewards, next_obses, discounts,
+                      logger, step):
+        
+        #import ipdb; ipdb.set_trace()
+        states = [torch.zeros((obses.shape[1], self.state_model.state_dim)).to(self.device)]
+        T = obses.shape[0]
+        for t in range(T):
+            obs, action, reward, next_obs = obses[t], actions[t], rewards[t], next_obses[t]
+            state = self.state_model(states[-1], obs, action, reward, next_obs)
+            states.append(state)
+            
+        with torch.no_grad():
+            dist = self.actor(next_obses[-1], states[-1])
+            next_action = dist.rsample()
+            target_Q1, target_Q2 = self.critic_target(
+                next_obses[-1], next_action, states[-1])
+            target_V = torch.min(target_Q1, target_Q2)
+            target_Q = rewards[-1] + (discounts[-1] * target_V)
+            
+        Q1, Q2 = self.critic(obses[-1], actions[-1], states[-2])
+        critic_loss = F.mse_loss(Q1, target_Q) + F.mse_loss(Q2, target_Q)
 
-    def update_actor(self, obses, actions, rewards, next_obses, logger, step):
+        logger.log('train_critic/loss', critic_loss, step)
+
+        # Optimize the critic
+        self.critic_optimizer.zero_grad()
+        self.state_model_optimizer.zero_grad()
+        critic_loss.backward()
+        self.critic_optimizer.step()
+        self.state_model_optimizer.step()
+
+        self.critic.log(logger, step)
+
+    def update_actor2(self, obses, actions, rewards, next_obses, logger, step):
         #import ipdb; ipdb.set_trace()
         state = torch.zeros((obses.shape[1], self.state_model.state_dim)).to(self.device)
         T = obses.shape[0]
@@ -221,6 +254,32 @@ class MetaDDPGAgent(object):
             
             state = self.state_model(state, obs, action, reward, next_obs)
 
+        logger.log('train_actor/loss', actor_loss, step)
+
+        # optimize the actor
+        self.actor_optimizer.zero_grad()
+        self.state_model_optimizer.zero_grad()
+        actor_loss.backward()
+        self.actor_optimizer.step()
+        self.state_model_optimizer.step()
+
+        self.actor.log(logger, step)
+        
+    def update_actor(self, obses, actions, rewards, next_obses, logger, step):
+        #import ipdb; ipdb.set_trace()
+        state = torch.zeros((obses.shape[1], self.state_model.state_dim)).to(self.device)
+        T = obses.shape[0]
+        for t in range(T - 1):
+            obs, action, reward, next_obs = obses[t], actions[t], rewards[t], next_obses[t]
+            state = self.state_model(state, obs, action, reward, next_obs)
+            
+        dist = self.actor(obses[-1], state)
+        action = dist.rsample()
+        log_prob = dist.log_prob(action).sum(-1, keepdim=True)
+        Q1, Q2 = self.critic(obses[-1], action, state)
+        Q = torch.min(Q1, Q2)
+
+        actor_loss = -Q.mean()
         logger.log('train_actor/loss', actor_loss, step)
 
         # optimize the actor

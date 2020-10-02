@@ -48,6 +48,7 @@ def main():
     overrides.add(key='num_train_steps', values=[500000])
     overrides.add(key='eval_frequency', values=[10000])
     overrides.add(key='agent', values=['meta_ddpg'])
+    overrides.add(key='agent.params.multi_step', values=[1, 3, 5, 10, 20])
     
     # seeds
     overrides.add(key='seed', values=list(range(1, 6)))
