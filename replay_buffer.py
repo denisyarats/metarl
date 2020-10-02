@@ -73,23 +73,51 @@ class ReplayBuffer(object):
 
     
 class MetaReplayBuffer(object):
-    def __init__(self, num_tasks, obs_shape, action_shape, capacity, device):
-        self.buffers = []
-        for task_id in range(num_tasks):
+    def __init__(self, task_ids, obs_shape, action_shape, capacity, device):
+        self.buffers = dict()
+        for task_id in task_ids:
             buffer = ReplayBuffer(obs_shape, action_shape, capacity, device)
-            self.buffers.append(buffer)
-            
-    def num_tasks(self):
-        return len(self.buffers)
+            self.buffers[task_id] = buffer
             
     def add(self, task_id, obs, action, reward, next_obs, done):
         buffer = self.buffers[task_id]
         buffer.add(obs, action, reward, next_obs, done)
         
-    def sample(self, task_id, batch_size, discount):
-        buffer = self.buffers[task_id]
-        return buffer.sample(batch_size, discount)
+    def sample(self, batch_size, discount):
+        obses, actions, rewards, next_obses, discounts = [], [], [], [], []
+        for task_id in self.buffers.keys():
+            buffer = self.buffers[task_id]
+            o, a, r, no, d = buffer.sample(batch_size, discount)
+            obses.append(o)
+            actions.append(a)
+            rewards.append(r)
+            next_obses.append(no)
+            discounts.append(d)
+            
+        obses = torch.cat(obses, axis=0)
+        actions = torch.cat(actions, axis=0)
+        rewards = torch.cat(rewards, axis=0)
+        next_obses = torch.cat(next_obses, axis=0)
+        discounts = torch.cat(discounts, axis=0)
+        
+        return obses, actions, rewards, next_obses, discounts
     
-    def multi_sample(self, task_id, batch_size, T, discount):
-        buffer = self.buffers[task_id]
-        return buffer.multi_sample(batch_size, T, discount)
+    def multi_sample(self, batch_size, T, discount):
+        obses, actions, rewards, next_obses, discounts = [], [], [], [], []
+        for task_id in self.buffers.keys():
+            buffer = self.buffers[task_id]
+            o, a, r, no, d = buffer.multi_sample(batch_size, T, discount)
+            obses.append(o)
+            actions.append(a)
+            rewards.append(r)
+            next_obses.append(no)
+            discounts.append(d)
+            
+        obses = torch.cat(obses, axis=1)
+        actions = torch.cat(actions, axis=1)
+        rewards = torch.cat(rewards, axis=1)
+        next_obses = torch.cat(next_obses, axis=1)
+        discounts = torch.cat(discounts, axis=1)
+        
+        return obses, actions, rewards, next_obses, discounts
+        

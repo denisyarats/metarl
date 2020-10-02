@@ -13,7 +13,7 @@ agent:
     actor_update_frequency: 1
     critic_tau: 0.005
     critic_target_update_frequency: 2
-    batch_size: ${batch_size}
+    batch_size: 64
     
 critic:
   class: agent.ddpg.Critic

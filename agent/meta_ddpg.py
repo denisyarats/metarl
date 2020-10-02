@@ -292,18 +292,16 @@ class MetaDDPGAgent(object):
         self.actor.log(logger, step)
 
     def update(self, replay_buffer, logger, step):
-        task_ids = [np.random.randint(replay_buffer.num_tasks())]
-        for task_id in task_ids:
-            obses, actions, rewards, next_obses, discounts = replay_buffer.multi_sample(
-                task_id, self.batch_size, self.multi_step, self.discount)
+        obses, actions, rewards, next_obses, discounts = replay_buffer.multi_sample(
+            self.batch_size, self.multi_step, self.discount)
 
-            logger.log(f'train/task_{task_id}_batch_reward', rewards.mean(), step)
+        logger.log(f'train/batch_reward', rewards.mean(), step)
 
-            self.update_critic(obses, actions, rewards, next_obses, discounts, logger,
-                               step)
+        self.update_critic(obses, actions, rewards, next_obses, discounts, logger,
+                           step)
 
-            if step % self.actor_update_frequency == 0:
-                self.update_actor(obses, actions, rewards, next_obses, logger, step)
+        if step % self.actor_update_frequency == 0:
+            self.update_actor(obses, actions, rewards, next_obses, logger, step)
 
         if step % self.critic_target_update_frequency == 0:
             utils.soft_update_params(self.critic, self.critic_target,

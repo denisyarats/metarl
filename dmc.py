@@ -59,6 +59,32 @@ class FlattenObservationWrapper(dm_env.Environment):
         return getattr(self._env, name)
     
     
+class TimeLimitWrapper(dm_env.Environment):
+    def __init__(self, env, episode_length):
+        self._env = env
+        self._episode_length = episode_length
+
+    def reset(self):
+        self._t = 0
+        return self._env.reset()
+
+    def step(self, action):
+        time_step = self._env.step(action)
+        self._t += 1
+        if self._t >= self._episode_length:
+            return time_step._replace(step_type=dm_env.StepType.LAST)
+        return time_step
+
+    def observation_spec(self):
+        return self._env.observation_spec()
+
+    def action_spec(self):
+        return self._env.action_spec()
+
+    def __getattr__(self, name):
+        return getattr(self._env, name)
+    
+    
     
 class MetaEnv(dm_env.Environment):
     def __init__(self, envs):
@@ -162,8 +188,7 @@ def make(env_name, seed):
     return env
 
 
-def make_meta(env_name, num_tasks, seed):
-    assert num_tasks == 5
+def make_meta(env_name, episode_length, seed):
     assert env_name == 'cartpole_balance'
     envs = [
         multi_task_cartpole.balance_v1(random=seed),
@@ -174,6 +199,7 @@ def make_meta(env_name, num_tasks, seed):
     ]
     envs = [action_scale.Wrapper(env, minimum=-1.0, maximum=+1.0) for env in envs]
     envs = [FlattenObservationWrapper(env) for env in envs]
+    envs = [TimeLimitWrapper(env, episode_length) for env in envs]
         
     env = MetaEnv(envs)
     #env = TaskIdWrapper(env)

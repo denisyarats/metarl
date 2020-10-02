@@ -196,7 +196,7 @@ class DDPGAgent(object):
 
     def update(self, replay_buffer, logger, step):
         obs, action, reward, next_obs, discount = replay_buffer.sample(
-            0, self.batch_size, self.discount)
+            self.batch_size, self.discount)
 
         logger.log('train/batch_reward', reward.mean(), step)
 

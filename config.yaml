@@ -3,17 +3,17 @@ defaults:
 
 # env
 env: cartpole_balance
-num_tasks: 5
-train_tasks: [0, 1, 2, 3, 4]
-eval_tasks: [3, 4]
+episode_length: 200
+train_tasks: [4] #[0, 1, 2, 3, 4]
+eval_tasks: [4] #[3, 4]
 # train
 num_train_steps: 1000000
-num_seed_steps: 5000
+num_seed_steps: 1000
 num_train_iters: 1
 replay_buffer_capacity: ${num_train_steps}
 seed: 1
 # eval
-eval_frequency: 10000
+eval_frequency: 2000
 num_eval_episodes: 10
 num_adapt_episodes: 2
 # misc
@@ -23,7 +23,6 @@ save_video: true
 device: cuda
 # global params
 lr: 1e-4
-batch_size: 1024
 actor_stddev: 0.2
 
 experiment: bench

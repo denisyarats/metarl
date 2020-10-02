@@ -35,8 +35,8 @@ class Workspace(object):
 
         utils.set_seed_everywhere(cfg.seed)
         self.device = torch.device(cfg.device)
-        self.env = dmc.make_meta(cfg.env, cfg.num_tasks, cfg.seed)
-        self.eval_env = dmc.make_meta(cfg.env, cfg.num_tasks, cfg.seed + 1)
+        self.env = dmc.make_meta(cfg.env, cfg.episode_length, cfg.seed)
+        self.eval_env = dmc.make_meta(cfg.env, cfg.episode_length, cfg.seed + 1)
 
         obs_spec = self.env.observation_spec()['features']
         action_spec = self.env.action_spec()
@@ -49,8 +49,7 @@ class Workspace(object):
         ]
         self.agent = hydra.utils.instantiate(cfg.agent)
 
-        num_buffers = 1 if cfg.agent.name == 'ddpg' else len(cfg.train_tasks)
-        self.replay_buffer = MetaReplayBuffer(num_buffers,
+        self.replay_buffer = MetaReplayBuffer(cfg.train_tasks,
                                           obs_spec.shape, action_spec.shape,
                                           cfg.replay_buffer_capacity,
                                           self.device)
@@ -100,10 +99,10 @@ class Workspace(object):
                 self.eval_video_recorder.save(f'task_{task_id}_step_{self.step}.mp4')
             average_episode_reward /= self.cfg.num_eval_episodes
             average_total_reward += average_episode_reward
-            self.logger.log(f'eval/task_{task_id}_episode_reward', average_episode_reward,
+            self.logger.log(f'eval/task_{task_id}_episode_reward', average_episode_reward / self.cfg.episode_length,
                             self.step)
-        average_total_reward /= self.eval_env.num_tasks()
-        self.logger.log('eval/episode_reward', average_total_reward,
+        average_total_reward /= len(self.cfg.eval_tasks)
+        self.logger.log('eval/episode_reward', average_total_reward / self.cfg.episode_length,
                             self.step)
         self.logger.dump(self.step, ty='eval')
 
@@ -118,7 +117,7 @@ class Workspace(object):
                     self.logger.log('train/fps', fps, self.step)
                     start_time = time.time()
 
-                    self.logger.log('train/episode_reward', episode_reward,
+                    self.logger.log('train/episode_reward', episode_reward / self.cfg.episode_length,
                                     self.step)
                     self.logger.log('train/episode', episode, self.step)
                     self.logger.dump(
@@ -167,8 +166,7 @@ class Workspace(object):
             done = time_step.last()
             episode_reward += time_step.reward
 
-            buffer_id = 0 if self.cfg.agent.name == 'ddpg' else task_id
-            self.replay_buffer.add(buffer_id, obs, action, time_step.reward, next_obs,
+            self.replay_buffer.add(task_id, obs, action, time_step.reward, next_obs,
                                    done)
             # update agent's memory
             state = self.agent.step(state, obs, action, time_step.reward, next_obs)
